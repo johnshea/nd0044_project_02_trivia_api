@@ -38,8 +38,10 @@ class TriviaTestCase(unittest.TestCase):
         res = self.client().get('/questions?page=1')
         data = res.get_json()
 
+        total_questions_count = len(Question.query.all())
+
         self.assertEqual(res.status_code, 200)
-        self.assertEqual(data['total_questions'], 19)
+        self.assertEqual(data['total_questions'], total_questions_count)
         self.assertTrue(data['questions'])
         self.assertEqual(data['categories']['2'], 'Art')
 
@@ -60,6 +62,40 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(data['success'], True)
         self.assertTrue(data['categories'])
         self.assertEqual(data['categories']['3'], 'Geography')
+
+    def test_create_new_question(self):
+
+        new_question = {
+            "question": "The Big Apple is in which state?",
+            "answer": "New York",
+            "difficulty": 1,
+            "category": 3
+        }
+
+        total_questions_before = len(Question.query.filter(Question.category == 3).all())
+
+        res = self.client().post('/questions', json=new_question)
+        data = res.get_json()
+
+        total_questions_after = len(Question.query.filter(Question.category == 3).all())
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(total_questions_before+1, total_questions_after)
+        self.assertEqual(data['success'], True)
+
+    def test_delete_question(self):
+
+        question_before = Question.query.filter(Question.id == 4).one_or_none()
+        self.assertTrue(question_before)
+
+        res = self.client().delete('/questions/4')
+        data = res.get_json()
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data['success'], True)
+
+        question_after = Question.query.filter(Question.id == 4).one_or_none()
+        self.assertFalse(question_after)
 
 # Make the tests conveniently executable
 if __name__ == "__main__":
