@@ -16,6 +16,7 @@ def create_app(test_config=None):
   '''
   @TODO: Set up CORS. Allow '*' for origins. Delete the sample route after completing the TODOs
   '''
+  #cors = CORS(app, resources={'origins': '*'})
 
   '''
   @TODO: Use the after_request decorator to set Access-Control-Allow
@@ -26,6 +27,18 @@ def create_app(test_config=None):
   Create an endpoint to handle GET requests 
   for all available categories.
   '''
+  @app.route('/categories', methods=['GET'])
+  def all_categories():
+
+    categories = Category.query.order_by(Category.id).all()
+    categories_result = {}
+    for cat in categories:
+      categories_result[cat.id] = cat.type
+
+    return jsonify({
+      "success": True,
+      "categories": categories_result
+    })
 
 
   '''
@@ -40,6 +53,27 @@ def create_app(test_config=None):
   ten questions per page and pagination at the bottom of the screen for three pages.
   Clicking on the page numbers should update the questions. 
   '''
+  @app.route('/questions', methods=['GET'])
+  def get_questions():
+    questions = Question.query.order_by(Question.id).all()
+    formatted_questions = [question.format() for question in questions]
+
+    categories = Category.query.order_by(Category.id).all()
+    # formatted_categories = [{category.id: category.type} for category in categories]
+    categories_result = {}
+    for cat in categories:
+      categories_result[cat.id] = cat.type
+
+    page = request.args.get('page', 1, type=int)
+    start = (page - 1) * QUESTIONS_PER_PAGE
+    end = start + QUESTIONS_PER_PAGE
+
+    return jsonify({
+      "questions": formatted_questions[start:end],
+      "total_questions": len(questions),
+      "categories": categories_result,
+      "current_category": 1
+    })
 
   '''
   @TODO: 
@@ -79,7 +113,16 @@ def create_app(test_config=None):
   categories in the left column will cause only questions of that 
   category to be shown. 
   '''
+  @app.route('/categories/<int:category_id>/questions', methods=['GET'])
+  def get_questions_by_category_id(category_id):
+    questions = Question.query.filter(Question.category == category_id).all()
+    formatted_questions = [question.format() for question in questions]
 
+    return jsonify({
+      "questions": formatted_questions,
+      "total_questions": len(formatted_questions),
+      "current_category": category_id
+    })
 
   '''
   @TODO: 
