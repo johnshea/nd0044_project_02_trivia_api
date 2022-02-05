@@ -97,6 +97,14 @@ class TriviaTestCase(unittest.TestCase):
         question_after = Question.query.filter(Question.id == 4).one_or_none()
         self.assertFalse(question_after)
 
+    def test_search_title(self):
+        res = self.client().post('/questions', json={"searchTerm": "title"})
+        data = res.get_json()
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data['success'], True)
+        self.assertEqual(len(data['questions']), 2)
+
 # Make the tests conveniently executable
 if __name__ == "__main__":
     unittest.main()

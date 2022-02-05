@@ -109,13 +109,26 @@ def create_app(test_config=None):
     answer = data.get('answer', None)
     difficulty = data.get('difficulty', None)
     category = data.get('category', None)
+    search_term = data.get('searchTerm', None)
 
-    new_question = Question(question, answer, category, difficulty)
-    new_question.insert()
+    if search_term:
+        questions = Question.query.filter(Question.question.ilike(f'%{search_term}%')).all()
+        formatted_questions = [question.format() for question in questions]
 
-    return jsonify({
-      "success": True
-    })
+        return jsonify({
+          "success": True,
+          "questions": formatted_questions,
+          "total_questions": len(formatted_questions),
+          "current_category": 1
+        })
+
+    else:
+      new_question = Question(question, answer, category, difficulty)
+      new_question.insert()
+
+      return jsonify({
+        "success": True
+      })
 
 
   '''
