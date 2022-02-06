@@ -105,6 +105,43 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(data['success'], True)
         self.assertEqual(len(data['questions']), 2)
 
+    def test_quizzes_with_category(self):
+        res = self.client().post('/quizzes', json={
+            "previous_questions": [5, 9],
+            "quiz_category": {'type': 'History', 'id': '4'}
+        })
+        data = res.get_json()
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data['success'], True)
+        self.assertIn(data['question']['id'], [12, 23])
+        self.assertNotIn(data['question']['id'], [5, 9])
+
+    def test_quizzes_without_category(self):
+        res = self.client().post('/quizzes', json={
+            "previous_questions": [5, 9],
+        })
+        data = res.get_json()
+
+        questions = Question.query.filter(Question.id.notin_([5,9])).order_by(Question.id).all()
+
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(data['success'])
+        self.assertIn(data['question']['id'], [question.id for question in questions])
+        self.assertNotIn(data['question']['id'], [5, 9])
+
+    def test_quizzes_no_questions_left(self):
+        res = self.client().post('/quizzes', json={
+            "previous_questions": [5, 9, 12, 23],
+            "quiz_category": {'type': 'History', 'id': '4'}
+        })
+        data = res.get_json()
+
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(data['success'])
+        self.assertIsNone(data['question'])
+
+
 # Make the tests conveniently executable
 if __name__ == "__main__":
     unittest.main()
