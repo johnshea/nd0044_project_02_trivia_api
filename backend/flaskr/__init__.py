@@ -3,6 +3,7 @@ from flask import Flask, request, abort, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import random
+import math
 
 from models import setup_db, Question, Category
 
@@ -73,6 +74,12 @@ def create_app(test_config=None):
     start = (page - 1) * QUESTIONS_PER_PAGE
     end = start + QUESTIONS_PER_PAGE
 
+    if page <= 0:
+      abort(400)
+
+    if page > math.ceil(len(questions) / QUESTIONS_PER_PAGE):
+      abort(404)
+    
     return jsonify({
       "questions": formatted_questions[start:end],
       "total_questions": len(questions),
@@ -90,6 +97,10 @@ def create_app(test_config=None):
   @app.route('/questions/<int:question_id>', methods=['DELETE'])
   def delete_question(question_id):
     question_to_delete = Question.query.filter(Question.id == question_id).one_or_none()
+
+    if not question_to_delete:
+      abort(400)
+
     question_to_delete.delete()
 
     return jsonify({
@@ -110,6 +121,9 @@ def create_app(test_config=None):
   def create_new_question():
     data = request.get_json()
 
+    if not data:
+      abort(400)
+
     question = data.get('question', None)
     answer = data.get('answer', None)
     difficulty = data.get('difficulty', None)
@@ -128,6 +142,9 @@ def create_app(test_config=None):
         })
 
     else:
+      if not question or not answer or not category or not difficulty:
+        abort(400)
+      
       new_question = Question(question, answer, category, difficulty)
       new_question.insert()
 
@@ -157,6 +174,13 @@ def create_app(test_config=None):
   '''
   @app.route('/categories/<int:category_id>/questions', methods=['GET'])
   def get_questions_by_category_id(category_id):
+
+    category = Category.query.filter(Category.id == category_id).one_or_none()
+    
+    # Abort if provided category does not exist
+    if not category:
+      abort(400)
+    
     questions = Question.query.filter(Question.category == category_id).all()
     formatted_questions = [question.format() for question in questions]
 
@@ -181,7 +205,15 @@ def create_app(test_config=None):
   def create_quizzes():
     data = request.get_json()
 
-    previous_questions = data.get('previous_questions', [])
+    if not data:
+      abort(400)
+
+    # Abort if required parameter is not provided
+    if "previous_questions" not in data:
+      abort(400)
+
+    previous_questions = data.get('previous_questions')
+
     quiz_category = data.get('quiz_category', None)
 
     if quiz_category:
@@ -209,7 +241,38 @@ def create_app(test_config=None):
   Create error handlers for all expected errors 
   including 404 and 422. 
   '''
-  
+  @app.errorhandler(400)
+  def bad_request(error):
+    return jsonify({
+      "success": False,
+      "message": "Bad Request",
+      "error": 400
+    }), 400
+
+  @app.errorhandler(404)
+  def not_found(error):
+    return jsonify({
+      "success": False,
+      "message": "Not Found",
+      "error": 404
+    }), 404
+
+  @app.errorhandler(422)
+  def unprocessable_entity(error):
+    return jsonify({
+      "success": False,
+      "message": "Unprocessable Entity",
+      "error": 422
+    }), 422
+
+  @app.errorhandler(500)
+  def internal_server_error(error):
+    return jsonify({
+      "success": False,
+      "message": "Internal Server Error",
+      "error": 500
+    }), 500
+
   return app
 
     
